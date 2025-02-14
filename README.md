@@ -39,13 +39,13 @@ yarn add react-native-element-dropdown
 ### Dropdown Props
 | Props              | Params                                          | isRequire | Description                                                         |
 | ------------------ | ----------------------------------------------- | --------- | ------------------------------------------------------------------- |
-| mode               | 'default' or 'modal'                            | No        | Mode 'modal' is show the dropdown in the middle of the screen.      |
+| mode               | 'default' or 'modal' of 'auto'                  | No        | Mode 'modal' is show the dropdown in the middle of the screen.      |
 | data               | Array                                           | Yes       | Data is a plain array                                               |
 | labelField         | String                                          | Yes       | Extract the label from the data item                                |
 | valueField         | String                                          | Yes       | Extract the primary key from the data item                          |
-| searchField        | String                                          | Yes       | Specify the field of data list you want to search                   |
+| searchField        | String                                          | No       | Specify the field of data list you want to search                   |
 | onChange           | (item: object) => void                          | Yes       | Selection callback                                                  |
-| onChangeText       | (search: string) => void                        | Yes       | Callback that is called when the text input's text changes          |
+| onChangeText       | (search: string) => void                        | No       | Callback that is called when the text input's text changes          |
 | value              | Item                                            | No        | Set default value                                                   |
 | placeholder        | String                                          | No        | The string that will be rendered before dropdown has been selected  |
 | placeholderStyle   | TextStyle                                       | No        | Styling for text placeholder                                        |
@@ -67,6 +67,7 @@ yarn add react-native-element-dropdown
 | searchQuery        | (keyword: string, labelValue: string) => Boolean| No        | Callback used to filter the list of items                           |
 | inputSearchStyle   | ViewStyle                                       | No        | Styling for input search                                            |
 | searchPlaceholder  | String                                          | No        | The string that will be rendered before text input has been entered |
+| searchPlaceholderTextColor  | String                                 | No        | The text color of the placeholder string                            |
 | renderInputSearch  | (onSearch: (text:string) => void) => JSX.Element| No        | Customize TextInput search                                          |
 | disable            | Boolean                                         | No        | Specifies the disabled state of the Dropdown                        |
 | dropdownPosition   | 'auto' or 'top' or 'bottom'                     | No        | Dropdown list position. Default is 'auto'                           |
@@ -87,18 +88,22 @@ yarn add react-native-element-dropdown
 | itemTestIDField    | String                                          | No        | Add this field to the input data. Ex: DATA = [{itemTestIDField: '', label: '', value:: ''}]|
 | accessibilityLabel | String     | No    | Set an accessibilityLabel on the view, so that people who use VoiceOver know what element they have selected |
 | itemAccessibilityLabelField | String                                 | No        | Add this field to the input data. Ex: DATA = [{itemAccessibilityLabelField: '', label: '', value:: ''}]|
+| closeModalWhenSelectedItem | Boolean                                 | No        | By default, closeModalWhenSelectedItem is set to true. When closeModalWhenSelectedItem is set to false, the Modal won't close when an item is selected. |
+| excludeItems       | Item[]                                          | No        | The array containing the items to be excluded.                      |
+| excludeSearchItems | Item[]                                          | No        | The array containing the items to be excluded.                      |
 
 
 
 ### MultiSelect Props
 | Props              | Params                                               | isRequire | Description                                                         |
 | ------------------ | -----------------------------------------------------| --------- | ------------------------------------------------------------------- |
+| mode               | 'default' or 'modal' of 'auto'                       | No        | Mode 'modal' is show the dropdown in the middle of the screen.      |
 | data               | Array                                                | Yes       | Data is a plain array                                               |
 | labelField         | String                                               | Yes       | Extract the label from the data item                                |
 | valueField         | String                                               | Yes       | Extract the primary key from the data item                          |
-| searchField        | String                                               | Yes       | Specify the field of data list you want to search                   |
+| searchField        | String                                               | No       | Specify the field of data list you want to search                   |
 | onChange           | (value[]) => void                                    | Yes       | Selection callback. A array containing the "valueField".            |
-| onChangeText       | (search: string) => void                             | Yes       | Callback that is called when the text input's text changes          |
+| onChangeText       | (search: string) => void                             | No       | Callback that is called when the text input's text changes          |
 | value              | Item[]                                               | No        | Set default value. A array containing the "valueField".             |
 | placeholder        | String                                               | No        | The string that will be rendered before dropdown has been selected  |
 | placeholderStyle   | TextStyle                                            | No        | Styling for text placeholder                                        |
@@ -117,6 +122,7 @@ yarn add react-native-element-dropdown
 | itemTextStyle      | TextStyle                                            | No        | Styling for text item in list                                       |
 | selectedStyle      | ViewStyle                                            | No        | Styling for selected view                                           |
 | selectedTextStyle  | TextStyle                                            | No        | Styling for selected text                                           |
+| selectedTextProps  | TextProps                                            | No        | Text Props for selected text. Ex: numberOfLines={1}                 |
 | renderSelectedItem | (item: object, unSelect?: () => void) => JSX.Element | No        | Takes an item from data and renders it into the list selected       |
 | alwaysRenderSelectedItem | Boolean                                        | No        | Always show the list of selected items                              |
 | visibleSelectedItem | Boolean                                             | No        | Option to hide selected item list, Ẽx: visibleSelectedItem={false}  |
@@ -124,6 +130,7 @@ yarn add react-native-element-dropdown
 | searchQuery        | (keyword: string, labelValue: string) => Boolean     | No        | Callback used to filter the list of items                           |
 | inputSearchStyle   | ViewStyle                                            | No        | Styling for input search                                            |
 | searchPlaceholder  | String                                               | No        | The string that will be rendered before text input has been entered |
+| searchPlaceholderTextColor  | String                                      | No        | The text color of the placeholder string                            |
 | renderInputSearch  | (onSearch: (text:string) => void) => JSX.Element     | No        | Customize TextInput search                                          |
 | disable            | Boolean                                              | No        | Specifies the disabled state of the Dropdown                        |
 | dropdownPosition   | 'auto' or 'top' or 'bottom'                          | No        | Dropdown list position. Default is 'auto'                           |
@@ -145,6 +152,8 @@ yarn add react-native-element-dropdown
 | itemTestIDField    | String                                               | No        | Add this field to the input data. Ex: DATA = [{itemTestIDField: '', label: '', value:: ''}]|
 | accessibilityLabel | String          | No    | Set an accessibilityLabel on the view, so that people who use VoiceOver know what element they have selected |
 | itemAccessibilityLabelField | String                                      | No        | Add this field to the input data. Ex: DATA = [{itemAccessibilityLabelField: '', label: '', value:: ''}]|
+| excludeItems       | Item[]                                               | No        | The array containing the items to be excluded.                      |
+| excludeSearchItems | Item[]                                               | No        | The array containing the items to be excluded.                      |
 
 
 

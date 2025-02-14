@@ -1,7 +1,12 @@
-import _ from 'lodash';
+/* eslint-disable @typescript-eslint/no-shadow */
+import _assign from 'lodash/assign';
+import _differenceWith from 'lodash/differenceWith';
+import _findIndex from 'lodash/findIndex';
+import _get from 'lodash/get';
+import _isEqual from 'lodash/isEqual';
+
+import { debounce } from 'lodash';
 import React, {
-  JSXElementConstructor,
-  ReactElement,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -17,18 +22,18 @@ import {
   Keyboard,
   KeyboardEvent,
   Modal,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableHighlight,
   TouchableWithoutFeedback,
   View,
   ViewStyle,
-  StatusBar,
 } from 'react-native';
 import { useDetectDevice } from '../../toolkits';
 import { useDeviceOrientation } from '../../useDeviceOrientation';
 import CInput from '../TextInput';
-import { DropdownProps } from './model';
+import { DropdownProps, IDropdownRef } from './model';
 import { styles } from './styles';
 
 const { isTablet } = useDetectDevice;
@@ -36,10 +41,8 @@ const ic_down = require('../../assets/down.png');
 
 const statusBarHeight: number = StatusBar.currentHeight || 0;
 
-const DropdownComponent: <T>(
-  props: DropdownProps<T>
-) => ReactElement<any, string | JSXElementConstructor<any>> | null =
-  React.forwardRef((props, currentRef) => {
+const DropdownComponent = React.forwardRef<IDropdownRef, DropdownProps<any>>(
+  (props, currentRef) => {
     const orientation = useDeviceOrientation();
     const {
       testID,
@@ -65,6 +68,7 @@ const DropdownComponent: <T>(
       fontFamily,
       iconColor = 'gray',
       searchPlaceholder,
+      searchPlaceholderTextColor = 'gray',
       placeholder = 'Select item',
       search = false,
       maxHeight = 340,
@@ -90,6 +94,9 @@ const DropdownComponent: <T>(
       accessibilityLabel,
       itemAccessibilityLabelField,
       mode = 'default',
+      closeModalWhenSelectedItem = true,
+      excludeItems = [],
+      excludeSearchItems = [],
     } = props;
 
     const ref = useRef<View>(null);
@@ -120,7 +127,32 @@ const DropdownComponent: <T>(
     });
 
     useEffect(() => {
-      setListData([...data]);
+      return eventClose;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const excludeData = useCallback(
+      (data: any[]) => {
+        if (excludeItems.length > 0) {
+          const getData = _differenceWith(
+            data,
+            excludeItems,
+            (obj1, obj2) => _get(obj1, valueField) === _get(obj2, valueField)
+          );
+          return getData || [];
+        } else {
+          return data || [];
+        }
+      },
+      [excludeItems, valueField]
+    );
+
+    useEffect(() => {
+      if (data && searchText.length === 0) {
+        const filterData = excludeData(data);
+        setListData([...filterData]);
+      }
+
       if (searchText) {
         onSearch(searchText);
       }
@@ -129,6 +161,7 @@ const DropdownComponent: <T>(
 
     const eventOpen = () => {
       if (!disable) {
+        _measure();
         setVisible(true);
         if (onFocus) {
           onFocus();
@@ -137,7 +170,6 @@ const DropdownComponent: <T>(
         if (searchText.length > 0) {
           onSearch(searchText);
         }
-        scrollIndex();
       }
     };
 
@@ -163,9 +195,14 @@ const DropdownComponent: <T>(
     const _measure = useCallback(() => {
       if (ref && ref?.current) {
         ref.current.measureInWindow((pageX, pageY, width, height) => {
-          const isFull = isTablet
+          let isFull = isTablet
             ? false
             : mode === 'modal' || orientation === 'LANDSCAPE';
+
+          if (mode === 'auto') {
+            isFull = false;
+          }
+
           const top = isFull ? 20 : height + pageY + 2;
           const bottom = H - top + height;
           const left = I18nManager.isRTL ? W - width - pageX : pageX;
@@ -218,10 +255,10 @@ const DropdownComponent: <T>(
 
     const getValue = useCallback(() => {
       const defaultValue =
-        typeof value === 'object' ? _.get(value, valueField) : value;
+        typeof value === 'object' ? _get(value, valueField) : value;
 
       const getItem = data.filter((e) =>
-        _.isEqual(defaultValue, _.get(e, valueField))
+        _isEqual(defaultValue, _get(e, valueField))
       );
 
       if (getItem.length > 0) {
@@ -235,38 +272,65 @@ const DropdownComponent: <T>(
       getValue();
     }, [value, data, getValue]);
 
-    const scrollIndex = useCallback(() => {
-      if (autoScroll && data.length > 0 && listData.length === data.length) {
-        setTimeout(() => {
+    const scrollIndex = debounce(
+      useCallback(() => {
+        if (
+          autoScroll &&
+          data?.length > 0 &&
+          listData?.length === data?.length
+        ) {
           if (refList && refList?.current) {
             const defaultValue =
-              typeof value === 'object' ? _.get(value, valueField) : value;
+              typeof value === 'object' ? _get(value, valueField) : value;
 
-            const index = _.findIndex(listData, (e: any) =>
-              _.isEqual(defaultValue, _.get(e, valueField))
+            const index = _findIndex(listData, (e) =>
+              _isEqual(defaultValue, _get(e, valueField))
             );
-            if (index > -1 && index <= listData.length - 1) {
-              refList?.current?.scrollToIndex({
-                index: index,
-                animated: false,
-              });
+            if (
+              listData?.length > 0 &&
+              index > -1 &&
+              index <= listData?.length - 1
+            ) {
+              try {
+                refList.current.scrollToIndex({
+                  index: index,
+                  animated: false,
+                });
+              } catch (error) {
+                console.warn(`scrollToIndex error: ${error}`);
+              }
             }
           }
-        }, 200);
-      }
-    }, [autoScroll, data.length, listData, value, valueField]);
+        }
+      }, [autoScroll, data.length, listData, value, valueField]),
+      200
+    );
 
     const showOrClose = useCallback(() => {
       if (!disable) {
-        if (keyboardHeight > 0 && visible) {
+        const visibleStatus = !visible;
+
+        if (keyboardHeight > 0 && !visibleStatus) {
           return Keyboard.dismiss();
         }
 
-        _measure();
-        setVisible(!visible);
-        setListData(data);
+        if (!visibleStatus) {
+          if (onChangeText) {
+            onChangeText('');
+          }
+          setSearchText('');
+          onSearch('');
+        }
 
-        if (!visible) {
+        _measure();
+        setVisible(visibleStatus);
+
+        if (data) {
+          const filterData = excludeData(data);
+          setListData(filterData);
+        }
+
+        if (visibleStatus) {
           if (onFocus) {
             onFocus();
           }
@@ -275,10 +339,10 @@ const DropdownComponent: <T>(
             onBlur();
           }
         }
+
         if (searchText.length > 0) {
           onSearch(searchText);
         }
-        scrollIndex();
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
@@ -288,7 +352,6 @@ const DropdownComponent: <T>(
       _measure,
       data,
       searchText,
-      scrollIndex,
       onFocus,
       onBlur,
     ]);
@@ -297,14 +360,14 @@ const DropdownComponent: <T>(
       (text: string) => {
         if (text.length > 0) {
           const defaultFilterFunction = (e: any) => {
-            const item = _.get(e, searchField || labelField)
+            const item = _get(e, searchField || labelField)
               ?.toLowerCase()
-              .replace(' ', '')
+              .replace(/\s/g, '')
               .normalize('NFD')
               .replace(/[\u0300-\u036f]/g, '');
             const key = text
               .toLowerCase()
-              .replace(' ', '')
+              .replace(/\s/g, '')
               .normalize('NFD')
               .replace(/[\u0300-\u036f]/g, '');
 
@@ -312,7 +375,7 @@ const DropdownComponent: <T>(
           };
 
           const propSearchFunction = (e: any) => {
-            const labelText = _.get(e, searchField || labelField);
+            const labelText = _get(e, searchField || labelField);
 
             return searchQuery?.(text, labelText);
           };
@@ -320,12 +383,34 @@ const DropdownComponent: <T>(
           const dataSearch = data.filter(
             searchQuery ? propSearchFunction : defaultFilterFunction
           );
-          setListData(dataSearch);
+
+          if (excludeSearchItems.length > 0 || excludeItems.length > 0) {
+            const excludeSearchData = _differenceWith(
+              dataSearch,
+              excludeSearchItems,
+              (obj1, obj2) => _get(obj1, valueField) === _get(obj2, valueField)
+            );
+
+            const filterData = excludeData(excludeSearchData);
+            setListData(filterData);
+          } else {
+            setListData(dataSearch);
+          }
         } else {
-          setListData(data);
+          const filterData = excludeData(data);
+          setListData(filterData);
         }
       },
-      [data, searchField, labelField, searchQuery]
+      [
+        data,
+        searchQuery,
+        excludeSearchItems,
+        excludeItems,
+        searchField,
+        labelField,
+        valueField,
+        excludeData,
+      ]
     );
 
     const onSelect = useCallback(
@@ -334,14 +419,17 @@ const DropdownComponent: <T>(
           return onConfirmSelectItem(item);
         }
 
-        if (onChangeText) {
-          setSearchText('');
-          onChangeText('');
-        }
-        onSearch('');
         setCurrentValue(item);
         onChange(item);
-        eventClose();
+
+        if (closeModalWhenSelectedItem) {
+          if (onChangeText) {
+            onChangeText('');
+          }
+          setSearchText('');
+          onSearch('');
+          eventClose();
+        }
       },
       [
         confirmSelectItem,
@@ -350,11 +438,12 @@ const DropdownComponent: <T>(
         onChangeText,
         onConfirmSelectItem,
         onSearch,
+        closeModalWhenSelectedItem,
       ]
     );
 
     const _renderDropdown = () => {
-      const isSelected = currentValue && _.get(currentValue, valueField);
+      const isSelected = currentValue && _get(currentValue, valueField);
       return (
         <TouchableWithoutFeedback
           testID={testID}
@@ -373,7 +462,7 @@ const DropdownComponent: <T>(
               {...selectedTextProps}
             >
               {isSelected !== null
-                ? _.get(currentValue, labelField)
+                ? _get(currentValue, labelField)
                 : placeholder}
             </Text>
             {renderRightIcon ? (
@@ -395,15 +484,15 @@ const DropdownComponent: <T>(
 
     const _renderItem = useCallback(
       ({ item, index }: { item: any; index: number }) => {
-        const isSelected = currentValue && _.get(currentValue, valueField);
-        const selected = _.isEqual(_.get(item, valueField), isSelected);
-        _.assign(item, { _index: index });
+        const isSelected = currentValue && _get(currentValue, valueField);
+        const selected = _isEqual(_get(item, valueField), isSelected);
+        _assign(item, { _index: index });
         return (
           <TouchableHighlight
             key={index.toString()}
-            testID={_.get(item, itemTestIDField || labelField)}
+            testID={_get(item, itemTestIDField || labelField)}
             accessible={!!accessibilityLabel}
-            accessibilityLabel={_.get(
+            accessibilityLabel={_get(
               item,
               itemAccessibilityLabelField || labelField
             )}
@@ -435,7 +524,7 @@ const DropdownComponent: <T>(
                       font(),
                     ])}
                   >
-                    {_.get(item, labelField)}
+                    {_get(item, labelField)}
                   </Text>
                 </View>
               )}
@@ -488,7 +577,8 @@ const DropdownComponent: <T>(
                 }
                 onSearch(e);
               }}
-              placeholderTextColor="gray"
+              placeholderTextColor={searchPlaceholderTextColor}
+              showIcon
               iconStyle={[{ tintColor: iconColor }, iconStyle]}
             />
           );
@@ -506,6 +596,7 @@ const DropdownComponent: <T>(
       renderInputSearch,
       search,
       searchPlaceholder,
+      searchPlaceholderTextColor,
       testID,
       searchText,
     ]);
@@ -522,6 +613,7 @@ const DropdownComponent: <T>(
               {...flatListProps}
               keyboardShouldPersistTaps="handled"
               ref={refList}
+              onContentSizeChange={scrollIndex}
               onScrollToIndexFailed={scrollIndex}
               data={listData}
               inverted={isTopPosition ? inverted : false}
@@ -610,9 +702,6 @@ const DropdownComponent: <T>(
                   <View
                     style={StyleSheet.flatten([
                       styles.flex1,
-                      {
-                        width,
-                      },
                       !isTopPosition
                         ? { paddingTop: extendHeight }
                         : {
@@ -626,6 +715,9 @@ const DropdownComponent: <T>(
                       style={StyleSheet.flatten([
                         styles.container,
                         isFull ? styleHorizontal : styleVertical,
+                        {
+                          width,
+                        },
                         containerStyle,
                       ])}
                     >
@@ -667,6 +759,7 @@ const DropdownComponent: <T>(
         {_renderModal()}
       </View>
     );
-  });
+  }
+);
 
 export default DropdownComponent;
