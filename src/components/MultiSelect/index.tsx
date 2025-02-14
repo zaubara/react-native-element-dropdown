@@ -99,6 +99,7 @@ const MultiSelectComponent = React.forwardRef<
     mode = 'default',
     excludeItems = [],
     excludeSearchItems = [],
+    alwaysDismissKeyboard = false,
   } = props;
 
   const ref = useRef<View>(null);
@@ -263,12 +264,16 @@ const MultiSelectComponent = React.forwardRef<
     getValue();
   }, [getValue, value]);
 
-  const showOrClose = useCallback(() => {
+  const showOrClose = useCallback(async () => {
     if (!disable) {
       const visibleStatus = !visible;
 
       if (keyboardHeight > 0 && !visibleStatus) {
         return Keyboard.dismiss();
+      }
+      if (keyboardHeight > 0 && alwaysDismissKeyboard) {
+        Keyboard.dismiss();
+        await new Promise((resolve) => setTimeout(resolve, 200));
       }
 
       _measure();
