@@ -97,6 +97,7 @@ const DropdownComponent = React.forwardRef<IDropdownRef, DropdownProps<any>>(
       closeModalWhenSelectedItem = true,
       excludeItems = [],
       excludeSearchItems = [],
+      alwaysDismissKeyboard = false,
     } = props;
 
     const ref = useRef<View>(null);
@@ -306,12 +307,16 @@ const DropdownComponent = React.forwardRef<IDropdownRef, DropdownProps<any>>(
       200
     );
 
-    const showOrClose = useCallback(() => {
+    const showOrClose = useCallback(async () => {
       if (!disable) {
         const visibleStatus = !visible;
 
         if (keyboardHeight > 0 && !visibleStatus) {
           return Keyboard.dismiss();
+        }
+        if (keyboardHeight > 0 && alwaysDismissKeyboard) {
+          Keyboard.dismiss();
+          await new Promise((resolve) => setTimeout(resolve, 200));
         }
 
         if (!visibleStatus) {

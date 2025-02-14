@@ -73,4 +73,5 @@ export interface DropdownProps<T> {
   searchQuery?: (keyword: string, labelValue: string) => boolean;
   onChangeText?: (search: string) => void;
   onConfirmSelectItem?: (item: T) => void;
+  alwaysDismissKeyboard?: boolean;
 }
